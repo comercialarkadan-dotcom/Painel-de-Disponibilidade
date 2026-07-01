@@ -16,7 +16,7 @@ Configuração do serviço:
 - Runtime: `Python`
 - Build Command: `pip install -r requirements.txt`
 - Start Command: `python app.py`
-- Root Directory: `render-supabase`
+- Root Directory: deixe em branco, porque este repositório já foi publicado com o app na raiz.
 
 Variáveis de ambiente no Render:
 
