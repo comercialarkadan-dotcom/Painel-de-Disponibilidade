@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Disponibilidade da Frota | CDD Cascavel</title>
+  <script src="data.js"></script>
+  <style>
+    :root {
+      --bg: #eef3f5;
+      --panel: #ffffff;
+      --ink: #20313b;
+      --muted: #667783;
+      --line: #d9e3e8;
+      --teal: #1f6f64;
+      --green: #24865a;
+      --red: #b94141;
+      --amber: #c78a22;
+      --blue: #366f9f;
+      --violet: #6f5aa7;
+      --maint: #4969a8;
+      --soft-green: #e9f6ee;
+      --soft-red: #fdecec;
+      --soft-amber: #fff4df;
+      --soft-maint: #eef3ff;
+      --shadow: 0 14px 32px rgba(42, 56, 65, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    button, input, select {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    .app {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 26px;
+      background: #173f46;
+      color: #fff;
+      border-bottom: 4px solid #2aa779;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255,255,255,.26);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #2aa779, #366f9f);
+      display: grid;
+      place-items: center;
+      flex: 0 0 48px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: #cfe4e2;
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .timestamp {
+      font-size: 12px;
+      color: #d7e8e5;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      color: white;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .icon-btn:hover { background: rgba(255,255,255,.16); }
+
+    main {
+      width: min(1440px, calc(100% - 32px));
+      margin: 18px auto 36px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .filters {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(130px, 1fr)) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 0 0 5px;
+    }
+
+    .field select,
+    .field input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+
+    .field select:focus,
+    .field input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(31,111,100,.14);
+    }
+
+    .reset {
+      height: 38px;
+      min-width: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f7fafb;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .reset:hover { background: #eaf1f3; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(42, 56, 65, .06);
+    }
+
+    .tab-btn:hover { background: #f7fafb; }
+
+    .tab-btn.active {
+      color: #ffffff;
+      background: #1f6f64;
+      border-color: #1f6f64;
+    }
+
+    .view { display: none; }
+    .view.active {
+      display: grid;
+      gap: 16px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      min-height: 118px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .kpi .label {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .kpi .value {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .kpi .sub {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .kpi svg {
+      width: 34px;
+      height: 34px;
+      color: var(--teal);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr .9fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .panel-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chart-area {
+      padding: 14px;
+      min-height: 306px;
+    }
+
+    .line-chart {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 92px 1fr 58px;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .bar-label strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .bar-label span {
+      color: var(--muted);
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 16px;
+      background: #e7eef1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 4px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--amber), var(--red));
+    }
+
+    .bar-value {
+      text-align: right;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .donut-wrap {
+      display: grid;
+      grid-template-columns: 154px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 202px;
+    }
+
+    .donut {
+      width: 154px;
+      height: 154px;
+    }
+
+    .legend {
+      display: grid;
+      gap: 9px;
+      font-size: 13px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--green);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 472px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 760px;
+      font-size: 12px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7fafb;
+      color: var(--muted);
+      font-weight: 800;
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: #f7fafb; }
+
+    .compact-table table {
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    .compact-table th,
+    .compact-table td {
+      padding: 9px 8px;
+      white-space: nowrap;
+    }
+
+    .plate {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 800;
+    }
+
+    .truck-icon {
+      width: 24px;
+      height: 18px;
+      color: var(--blue);
+      flex: 0 0 auto;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 11px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .pill.ok { color: #14613e; background: var(--soft-green); border-color: #b8dec8; }
+    .pill.warn { color: #8a5c10; background: var(--soft-amber); border-color: #efd08d; }
+    .pill.maint { color: #264d8f; background: var(--soft-maint); border-color: #b9c9ee; }
+    .pill.bad { color: #8a1e1e; background: var(--soft-red); border-color: #efb7b7; }
+    .pill.off { color: #48535a; background: #edf1f2; border-color: #cbd7dc; }
+
+    @keyframes toolOrbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes softPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(73, 105, 168, .24); }
+      50% { box-shadow: 0 0 0 7px rgba(73, 105, 168, 0); }
+    }
+
+    .tool-orbit {
+      width: 30px;
+      height: 30px;
+      display: inline-grid;
+      place-items: center;
+      color: var(--maint);
+      border: 1px solid #b9c9ee;
+      border-radius: 50%;
+      background: #ffffff;
+      animation: softPulse 2.6s ease-in-out infinite;
+    }
+
+    .tool-orbit svg {
+      width: 20px;
+      height: 20px;
+      animation: toolOrbit 1.8s linear infinite;
+      transform-origin: 50% 50%;
+    }
+
+    .fleet-board {
+      display: grid;
+      gap: 18px;
+    }
+
+    .board-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .board-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 2px;
+    }
+
+    .board-title h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .board-title .total {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .board-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .board-box.ok { border-color: #a8daba; background: #f6fcf8; }
+    .board-box.warn { border-color: #efd08d; background: #fffbf0; }
+    .board-box.maint { border-color: #b9c9ee; background: #f7f9ff; }
+    .board-box.bad { border-color: #e7aeb6; background: #fff7fa; }
+
+    .board-subtitle {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .vehicle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(154px, 1fr));
+      gap: 10px;
+    }
+
+    .vehicle-card {
+      min-height: 108px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 2px 8px rgba(42, 56, 65, .05);
+      overflow: hidden;
+    }
+
+    .vehicle-main {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vehicle-card strong {
+      min-width: 0;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .vehicle-card span {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      text-align: right;
+      max-width: 72px;
+      overflow-wrap: anywhere;
+    }
+
+    .status-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+    }
+
+    .status-action {
+      height: 24px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f7fafb;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .status-action:hover { background: #eef4f6; }
+    .status-action.active.ok { color: #14613e; background: var(--soft-green); border-color: #9ed6b3; }
+    .status-action.active.warn { color: #8a5c10; background: var(--soft-amber); border-color: #e4bd63; }
+    .status-action.active.maint { color: #264d8f; background: var(--soft-maint); border-color: #9fb5e9; }
+    .status-action.active.bad { color: #8a1e1e; background: var(--soft-red); border-color: #df9ca5; }
+
+    .notice-chip {
+      grid-column: 1 / -1;
+      display: inline-flex;
+      width: max-content;
+      max-width: 100%;
+      min-height: 20px;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #eef3ff;
+      color: #264d8f;
+      border: 1px solid #b9c9ee;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .notice-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .notice-form {
+      display: grid;
+      grid-template-columns: 180px 1fr auto;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+
+    .notice-form select,
+    .notice-form input {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      outline: none;
+    }
+
+    .notice-form button {
+      height: 38px;
+      border: 1px solid #1f6f64;
+      border-radius: 6px;
+      background: #1f6f64;
+      color: #ffffff;
+      font-weight: 800;
+      padding: 0 14px;
+      cursor: pointer;
+    }
+
+    .notice-form button:hover { background: #18584f; }
+
+    .notice-list {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .notice-item {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfe;
+      padding: 10px;
+    }
+
+    .notice-item strong {
+      font-size: 13px;
+    }
+
+    .notice-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .notice-delete {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1px solid #efb7b7;
+      background: #fff7fa;
+      color: #8a1e1e;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .board-empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      color: var(--muted);
+      background: rgba(255,255,255,.7);
+      text-align: center;
+    }
+
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .mini-list {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mini-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfe;
+    }
+
+    .mini-row strong {
+      font-size: 13px;
+    }
+
+    .mini-row span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    @media (max-width: 1120px) {
+      .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: repeat(3, minmax(130px, 1fr)); }
+      .notice-form { grid-template-columns: 1fr; }
+      .notice-item { grid-template-columns: 1fr auto; }
+      .notice-item span { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+      .top-actions { justify-content: space-between; }
+      main { width: min(100% - 20px, 1440px); }
+      .kpis { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .donut-wrap { grid-template-columns: 1fr; justify-items: center; }
+      .brand h1 { font-size: 20px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .filters, .icon-btn { display: none; }
+      main { width: 100%; margin: 0; }
+      .panel, .kpi { box-shadow: none; }
+      .table-wrap { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="34" height="34">
+            <path d="M8 27h5l4-10h17l5 10h1a4 4 0 0 1 4 4v5h-5a5 5 0 0 1-10 0H19a5 5 0 0 1-10 0H4v-5a4 4 0 0 1 4-4Z" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M17 17v10M34 17v10" stroke="white" stroke-width="3"/>
+            <circle cx="14" cy="36" r="3" fill="white"/>
+            <circle cx="34" cy="36" r="3" fill="white"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Disponibilidade da Frota</h1>
+          <p>CDD Cascavel | Visão operacional da distribuição</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="timestamp" id="timestamp">Base carregando</div>
+        <button class="icon-btn" id="printBtn" title="Imprimir ou salvar em PDF" aria-label="Imprimir">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="filters" aria-label="Filtros">
+        <div class="field">
+          <label for="monthFilter">Mês</label>
+          <select id="monthFilter"></select>
+        </div>
+        <div class="field">
+          <label for="weekFilter">Semana</label>
+          <select id="weekFilter"></select>
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+            <option value="Disponível">Disponível</option>
+            <option value="Parado">Parado</option>
+            <option value="Indisponível">Indisponível</option>
+            <option value="Em manutenção">Em manutenção</option>
+            <option value="Desmobilizada">Desmobilizada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="profileFilter">Perfil</label>
+          <select id="profileFilter"></select>
+        </div>
+        <div class="field">
+          <label for="searchFilter">Buscar</label>
+          <input id="searchFilter" type="search" placeholder="Placa, motorista ou observação" />
+        </div>
+        <button class="reset" id="resetBtn" title="Limpar filtros" aria-label="Limpar filtros">
+          <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+            <path d="M4 7h10a6 6 0 1 1-4.2 10.2M4 7l4-4M4 7l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </section>
+
+      <section class="tabs" aria-label="NavegaÃ§Ã£o do painel">
+        <button class="tab-btn active" type="button" data-view="dashboardView">Painel</button>
+        <button class="tab-btn" type="button" data-view="boardView">Quadro da frota</button>
+      </section>
+
+      <div id="dashboardView" class="view active">
+      <section class="kpis" aria-label="Indicadores">
+        <article class="kpi">
+          <div class="label">Disponibilidade</div>
+          <div class="value" id="kpiDisponibilidade">--</div>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 16l3-4 3 2 5-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="sub" id="kpiDisponibilidadeSub">--</div>
+        </article>
+        <article class="kpi">
+          <div class="label">Frota atual</div>
+          <div class="value" id="kpiAtivos">--</div>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h2l2-5h9l3 5h2v3h-2a3 3 0 0 1-6 0H9a3 3 0 0 1-6 0v-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="19" r="1.5" fill="currentColor"/><circle cx="16" cy="19" r="1.5" fill="currentColor"/></svg>
+          <div class="sub" id="kpiAtivosSub">--</div>
+        </article>
+        <article class="kpi">
+          <div class="label">Disponíveis hoje</div>
+          <div class="value" id="kpiDisponiveis">--</div>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="sub">Na última data da base</div>
+        </article>
+        <article class="kpi">
+          <div class="label">Indisponíveis hoje</div>
+          <div class="value" id="kpiIndisp">--</div>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.5L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="sub" id="kpiIndispSub">--</div>
+        </article>
+        <article class="kpi">
+          <div class="label">Horas paradas</div>
+          <div class="value" id="kpiHoras">--</div>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="sub">Acumulado filtrado</div>
+        </article>
+      </section>
+
+      <section class="layout">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Evolução semanal</h2>
+            <span id="trendSubtitle">--</span>
+          </div>
+          <div class="chart-area">
+            <svg class="line-chart" id="trendChart" role="img" aria-label="Disponibilidade semanal"></svg>
+          </div>
+        </div>
+        <div class="side-stack">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Status atual</h2>
+              <span id="statusSubtitle">--</span>
+            </div>
+            <div class="chart-area">
+              <div class="donut-wrap">
+                <svg class="donut" id="donutChart" viewBox="0 0 160 160" aria-label="Distribuição de status"></svg>
+                <div class="legend" id="statusLegend"></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Maiores ofensores</h2>
+              <span>Horas indisponíveis</span>
+            </div>
+            <div class="mini-list" id="offenderList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Pareto por placa</h2>
+            <span id="paretoSubtitle">--</span>
+          </div>
+          <div class="chart-area">
+            <div class="bar-list" id="paretoBars"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Resumo mensal</h2>
+            <span>Base filtrada</span>
+          </div>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mês</th>
+                  <th>Ativos</th>
+                  <th>Disponíveis</th>
+                  <th>Indisp.</th>
+                  <th>Horas</th>
+                  <th>Disp.</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Frota atual</h2>
+          <span id="tableSubtitle">--</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Perfil</th>
+                <th>Status</th>
+                <th>Motorista</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="currentBody"></tbody>
+          </table>
+        </div>
+      </section>
+      </div>
+
+      <div id="boardView" class="view">
+        <section class="notice-panel" aria-label="Avisos da manutenção">
+          <div class="panel-head">
+            <h2>Avisos da manutenção</h2>
+            <span id="noticeSubtitle">Supervisor de Manutenção</span>
+          </div>
+          <div class="notice-form">
+            <select id="noticePlate" aria-label="Placa do aviso"></select>
+            <input id="noticeText" type="text" placeholder="Aviso sobre o caminhão" />
+            <button id="noticeSave" type="button">Adicionar</button>
+          </div>
+          <div class="notice-list" id="noticeList"></div>
+        </section>
+        <section class="fleet-board" id="fleetBoard" aria-label="Quadro de disponibilidade da frota"></section>
+      </div>
+
+      <div class="footer-note">CDD Cascavel | Disponibilidade operacional da frota</div>
+    </main>
+  </div>
+
+  <script>
+    const raw = window.DISPONIBILIDADE_DATA;
+    const state = { month: '', week: '', status: '', profile: '', search: '', view: 'dashboardView', overrides: {}, notices: [], sharedSave: false };
+    const colors = {
+      ok: '#24865a',
+      bad: '#b94141',
+      warn: '#c78a22',
+      off: '#667783',
+      blue: '#366f9f',
+      violet: '#6f5aa7'
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function storageKey() {
+      return `disp-frota-overrides-${raw.meta.ultimaDataBaseIso || raw.meta.ultimaDataBase}`;
+    }
+
+    function noticesKey() {
+      return `disp-frota-notices-${raw.meta.ultimaDataBaseIso || raw.meta.ultimaDataBase}`;
+    }
+
+    async function loadOverrides() {
+      try {
+        const response = await fetch(`/api/overrides?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}`, { cache: 'no-store' });
+        if (response.ok) {
+          const payload = await response.json();
+          state.overrides = payload.overrides || {};
+          state.sharedSave = true;
+          return;
+        }
+      } catch (error) {
+        state.sharedSave = false;
+      }
+      try {
+        state.overrides = JSON.parse(localStorage.getItem(storageKey()) || '{}');
+      } catch (error) {
+        state.overrides = {};
+      }
+    }
+
+    async function persistOverride(placa, status) {
+      state.overrides[placa] = { status, updatedAt: new Date().toISOString() };
+      try {
+        const response = await fetch('/api/overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: raw.meta.ultimaDataBaseIso, placa, status })
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          state.overrides = payload.overrides || state.overrides;
+          state.sharedSave = true;
+          return;
+        }
+      } catch (error) {
+        state.sharedSave = false;
+      }
+      localStorage.setItem(storageKey(), JSON.stringify(state.overrides));
+    }
+
+    function applyOverride(row) {
+      const override = state.overrides[row.placa];
+      if (!override || !override.status) return { ...row, sourceStatus: row.status };
+      return { ...row, sourceStatus: row.status, status: override.status, ajusteManual: true };
+    }
+
+    async function loadNotices() {
+      try {
+        const response = await fetch(`/api/notices?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}`, { cache: 'no-store' });
+        if (response.ok) {
+          const payload = await response.json();
+          state.notices = payload.notices || [];
+          state.sharedSave = true;
+          return;
+        }
+      } catch (error) {
+        state.sharedSave = false;
+      }
+      try {
+        state.notices = JSON.parse(localStorage.getItem(noticesKey()) || '[]');
+      } catch (error) {
+        state.notices = [];
+      }
+    }
+
+    async function persistNotice(placa, text) {
+      const clean = String(text || '').trim();
+      if (!placa || !clean) return;
+      try {
+        const response = await fetch('/api/notices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: raw.meta.ultimaDataBaseIso, placa, text: clean })
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          state.notices = payload.notices || state.notices;
+          state.sharedSave = true;
+          return;
+        }
+      } catch (error) {
+        state.sharedSave = false;
+      }
+      state.notices.unshift({ id: `${Date.now()}`, placa, text: clean, updatedAt: new Date().toISOString() });
+      localStorage.setItem(noticesKey(), JSON.stringify(state.notices));
+    }
+
+    async function deleteNotice(id) {
+      try {
+        const response = await fetch(`/api/notices?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (response.ok) {
+          const payload = await response.json();
+          state.notices = payload.notices || [];
+          state.sharedSave = true;
+          return;
+        }
+      } catch (error) {
+        state.sharedSave = false;
+      }
+      state.notices = state.notices.filter(item => item.id !== id);
+      localStorage.setItem(noticesKey(), JSON.stringify(state.notices));
+    }
+
+    function numberBR(value, digits = 0) {
+      return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value || 0);
+    }
+
+    function pctBR(value) {
+      return `${numberBR((value || 0) * 100, 1)}%`;
+    }
+
+    function statusClass(status) {
+      if (status === 'Disponível') return 'ok';
+      if (status === 'Parado') return 'warn';
+      if (status === 'Em manutenção') return 'maint';
+      if (status === 'Desmobilizada') return 'off';
+      return 'bad';
+    }
+
+    function statusColor(status) {
+      const type = statusClass(status);
+      return type === 'ok' ? colors.ok : type === 'warn' ? colors.warn : type === 'maint' ? colors.violet : type === 'off' ? colors.off : colors.bad;
+    }
+
+    function boardBucket(row) {
+      if (row.status === 'Disponível') return 'available';
+      if (row.status === 'Parado') return 'stopped';
+      if (row.status === 'Em manutenção') return 'maintenance';
+      return 'unavailable';
+    }
+
+    function bucketMeta(key) {
+      const map = {
+        available: { title: 'Disponíveis', badge: 'Disponível', tone: 'ok' },
+        stopped: { title: 'Paradas', badge: 'Parado', tone: 'warn' },
+        maintenance: { title: 'Em manutenção', badge: 'Manutenção', tone: 'maint' },
+        unavailable: { title: 'Indisponíveis', badge: 'Indisponível', tone: 'bad' }
+      };
+      return map[key];
+    }
+
+    function truckSvg() {
+      return `<svg class="truck-icon" viewBox="0 0 28 20" aria-hidden="true"><path d="M2 13h3l2-6h11l4 6h4v3h-3a3 3 0 0 1-6 0H11a3 3 0 0 1-6 0H2v-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="16" r="1.7" fill="currentColor"/><circle cx="20" cy="16" r="1.7" fill="currentColor"/></svg>`;
+    }
+
+    function matchesFilters(row) {
+      const haystack = `${row.placa} ${row.perfil} ${row.motorista} ${row.observacao} ${row.motivo}`.toLowerCase();
+      return (!state.month || row.mes === state.month)
+        && (!state.week || String(row.semanaMes) === state.week)
+        && (!state.status || row.status === state.status)
+        && (!state.profile || row.perfil === state.profile)
+        && (!state.search || haystack.includes(state.search.toLowerCase()));
+    }
+
+    function matchesCurrentFilters(row) {
+      const haystack = `${row.placa} ${row.perfil} ${row.motorista} ${row.observacao}`.toLowerCase();
+      return (!state.status || row.status === state.status)
+        && (!state.profile || row.perfil === state.profile)
+        && (!state.search || haystack.includes(state.search.toLowerCase()));
+    }
+
+    function filteredBase() {
+      return raw.base.filter(matchesFilters);
+    }
+
+    function activeRows(rows) {
+      return rows.filter(row => row.ativo === 1);
+    }
+
+    function summarizeRows(rows) {
+      const active = activeRows(rows);
+      const diasAtivos = active.reduce((sum, row) => sum + row.ativo, 0);
+      const disponiveis = active.reduce((sum, row) => sum + row.disponivel, 0);
+      const indisponiveis = active.reduce((sum, row) => sum + row.indisponivel, 0);
+      const horas = active.reduce((sum, row) => sum + row.horasIndisp, 0);
+      return {
+        diasAtivos,
+        disponiveis,
+        indisponiveis,
+        horas,
+        disponibilidade: diasAtivos ? disponiveis / diasAtivos : 0
+      };
+    }
+
+    function groupBy(rows, keyFn) {
+      const map = new Map();
+      rows.forEach(row => {
+        const key = keyFn(row);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(row);
+      });
+      return map;
+    }
+
+    function populateFilters() {
+      const months = [...new Map(raw.base.map(row => [row.mes, row.mesLabel])).entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]));
+      $('monthFilter').innerHTML = '<option value="">Todos</option>' + months.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+
+      const profiles = [...new Set(raw.base.map(row => row.perfil).filter(Boolean))].sort();
+      $('profileFilter').innerHTML = '<option value="">Todos</option>' + profiles.map(profile => `<option value="${profile}">${profile}</option>`).join('');
+      updateWeekOptions();
+    }
+
+    function updateWeekOptions() {
+      const rows = state.month ? raw.base.filter(row => row.mes === state.month) : raw.base;
+      const weeks = [...new Map(rows.map(row => [row.semanaMes, row.semanaLabel])).entries()]
+        .filter(([value]) => value)
+        .sort((a, b) => Number(a[0]) - Number(b[0]));
+      const current = state.week;
+      $('weekFilter').innerHTML = '<option value="">Todas</option>' + weeks.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+      if (weeks.some(([value]) => String(value) === current)) {
+        $('weekFilter').value = current;
+      } else {
+        state.week = '';
+        $('weekFilter').value = '';
+      }
+    }
+
+    function updateKpis(rows) {
+      const summary = summarizeRows(rows);
+      const current = currentRows();
+      const currentAvailable = current.filter(row => row.status === 'Disponível').length;
+      const currentUnavailable = current.filter(row => row.status !== 'Disponível' && row.status !== 'Parado').length;
+      $('kpiDisponibilidade').textContent = pctBR(summary.disponibilidade);
+      $('kpiDisponibilidadeSub').textContent = `${numberBR(summary.diasAtivos)} dias-veículo considerados`;
+      $('kpiAtivos').textContent = numberBR(current.length);
+      $('kpiAtivosSub').textContent = `Base ${raw.meta.ultimaDataBase}`;
+      $('kpiDisponiveis').textContent = numberBR(currentAvailable);
+      $('kpiIndisp').textContent = numberBR(currentUnavailable);
+      $('kpiIndispSub').textContent = 'Na última data da base';
+      $('kpiHoras').textContent = numberBR(summary.horas);
+    }
+
+    function weeklyRows(rows) {
+      const grouped = groupBy(activeRows(rows), row => `${row.mes}|${row.mesLabel}|${row.semanaMes}|${row.semanaLabel}`);
+      return [...grouped.entries()].map(([key, values]) => {
+        const [mes, mesLabel, semanaMes, semanaLabel] = key.split('|');
+        const sum = summarizeRows(values);
+        return {
+          mes,
+          mesLabel,
+          semanaMes: Number(semanaMes),
+          semanaLabel,
+          label: `${mesLabel} ${semanaLabel}`,
+          disponibilidade: sum.disponibilidade,
+          diasIndisponiveis: sum.indisponiveis,
+          horasIndisp: sum.horas
+        };
+      }).sort((a, b) => a.mes.localeCompare(b.mes) || a.semanaMes - b.semanaMes);
+    }
+
+    function monthlyRows(rows) {
+      const grouped = groupBy(activeRows(rows), row => `${row.mes}|${row.mesLabel}`);
+      return [...grouped.entries()].map(([key, values]) => {
+        const [mes, mesLabel] = key.split('|');
+        const sum = summarizeRows(values);
+        return { mes, mesLabel, ...sum };
+      }).sort((a, b) => a.mes.localeCompare(b.mes));
+    }
+
+    function paretoRows(rows) {
+      const grouped = groupBy(activeRows(rows), row => row.placa);
+      return [...grouped.entries()].map(([placa, values]) => {
+        const sum = summarizeRows(values);
+        const profile = values.find(row => row.perfil)?.perfil || '';
+        const reasons = {};
+        values.filter(row => row.indisponivel).forEach(row => {
+          const reason = row.motivo || row.status || 'Sem motivo';
+          reasons[reason] = (reasons[reason] || 0) + 1;
+        });
+        const mainReason = Object.entries(reasons).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+        return { placa, perfil: profile, motivoPrincipal: mainReason, ...sum };
+      }).sort((a, b) => (b.horas - a.horas) || (b.indisponiveis - a.indisponiveis));
+    }
+
+    function currentRows() {
+      return raw.current.map(applyOverride).filter(row => {
+        return matchesCurrentFilters(row);
+      }).sort((a, b) => {
+        const rank = { 'Indisponível': 0, 'Em manutenção': 1, 'Parado': 2, 'Disponível': 3, 'Desmobilizada': 4 };
+        return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || a.perfil.localeCompare(b.perfil) || a.placa.localeCompare(b.placa);
+      });
+    }
+
+    function drawTrend(rows) {
+      const data = weeklyRows(rows);
+      $('trendSubtitle').textContent = data.length ? `${data.length} semanas no filtro` : 'Sem dados';
+      const svg = $('trendChart');
+      const w = 900, h = 280, pad = { left: 46, right: 18, top: 22, bottom: 48 };
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.innerHTML = '';
+      if (!data.length) {
+        svg.innerHTML = `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#667783">Sem dados para o filtro</text>`;
+        return;
+      }
+
+      const minY = Math.max(0.75, Math.min(...data.map(d => d.disponibilidade)) - 0.04);
+      const maxY = 1;
+      const x = i => pad.left + (data.length === 1 ? 0 : i * (w - pad.left - pad.right) / (data.length - 1));
+      const y = v => pad.top + (maxY - v) * (h - pad.top - pad.bottom) / (maxY - minY || 1);
+      const axis = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      for (let i = 0; i <= 4; i++) {
+        const value = minY + (maxY - minY) * i / 4;
+        const yy = y(value);
+        axis.insertAdjacentHTML('beforeend', `<line x1="${pad.left}" y1="${yy}" x2="${w - pad.right}" y2="${yy}" stroke="#d9e3e8"/><text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#667783">${pctBR(value)}</text>`);
+      }
+      svg.appendChild(axis);
+
+      const path = data.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(d.disponibilidade).toFixed(1)}`).join(' ');
+      svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1f6f64" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`);
+      data.forEach((d, i) => {
+        const showLabel = data.length <= 12 || i % Math.ceil(data.length / 10) === 0 || i === data.length - 1;
+        svg.insertAdjacentHTML('beforeend', `<circle cx="${x(i)}" cy="${y(d.disponibilidade)}" r="5" fill="#fff" stroke="#1f6f64" stroke-width="3"><title>${d.label}: ${pctBR(d.disponibilidade)}</title></circle>`);
+        if (showLabel) {
+          svg.insertAdjacentHTML('beforeend', `<text x="${x(i)}" y="${h - 24}" text-anchor="middle" font-size="10" fill="#667783">${d.semanaLabel}</text><text x="${x(i)}" y="${h - 10}" text-anchor="middle" font-size="10" fill="#667783">${d.mesLabel}</text>`);
+        }
+      });
+    }
+
+    function drawDonut(rows) {
+      const current = currentRows();
+      const counts = current.reduce((acc, row) => {
+        acc[row.status] = (acc[row.status] || 0) + 1;
+        return acc;
+      }, {});
+      const entries = Object.entries(counts).filter(([, count]) => count > 0);
+      const total = entries.reduce((sum, [, count]) => sum + count, 0);
+      $('statusSubtitle').textContent = `${total} veículos na visão atual`;
+      const svg = $('donutChart');
+      svg.innerHTML = '';
+      if (!total) {
+        svg.innerHTML = '<text x="80" y="82" text-anchor="middle" fill="#667783">Sem dados</text>';
+        $('statusLegend').innerHTML = '';
+        return;
+      }
+      const cx = 80, cy = 80, r = 56, circumference = 2 * Math.PI * r;
+      let offset = 0;
+      entries.forEach(([status, count]) => {
+        const ratio = count / total;
+        const dash = ratio * circumference;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', cx);
+        circle.setAttribute('cy', cy);
+        circle.setAttribute('r', r);
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', statusColor(status));
+        circle.setAttribute('stroke-width', '24');
+        circle.setAttribute('stroke-dasharray', `${dash} ${circumference - dash}`);
+        circle.setAttribute('stroke-dashoffset', `${-offset}`);
+        circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+        circle.innerHTML = `<title>${status}: ${count}</title>`;
+        svg.appendChild(circle);
+        offset += dash;
+      });
+      svg.insertAdjacentHTML('beforeend', `<circle cx="${cx}" cy="${cy}" r="38" fill="#fff"/><text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="24" font-weight="800" fill="#20313b">${total}</text><text x="${cx}" y="${cy + 17}" text-anchor="middle" font-size="11" fill="#667783">veículos</text>`);
+      $('statusLegend').innerHTML = entries.map(([status, count]) => `<div class="legend-item"><span class="dot" style="background:${statusColor(status)}"></span><span>${status}</span><strong>${count}</strong></div>`).join('');
+    }
+
+    function drawPareto(rows) {
+      const data = paretoRows(rows).filter(row => row.horas > 0).slice(0, 10);
+      const max = Math.max(...data.map(row => row.horas), 1);
+      $('paretoSubtitle').textContent = data.length ? `Top ${data.length}` : 'Sem indisponibilidade';
+      $('paretoBars').innerHTML = data.length ? data.map(row => {
+        const width = Math.max(3, row.horas / max * 100);
+        return `<div class="bar-row">
+          <div class="bar-label"><strong>${row.placa}</strong><span>${row.perfil || row.motivoPrincipal || ''}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div>
+          <div class="bar-value">${numberBR(row.horas)}h</div>
+        </div>`;
+      }).join('') : '<div class="empty">Sem horas indisponíveis no filtro</div>';
+
+      const offenders = data.slice(0, 5);
+      $('offenderList').innerHTML = offenders.length ? offenders.map(row => `<div class="mini-row"><div><strong>${row.placa}</strong><br><span>${row.motivoPrincipal || row.perfil}</span></div><strong>${numberBR(row.horas)}h</strong></div>`).join('') : '<div class="empty">Sem ofensores no filtro</div>';
+    }
+
+    function renderMonthly(rows) {
+      const data = monthlyRows(rows);
+      $('monthlyBody').innerHTML = data.length ? data.map(row => `<tr>
+        <td>${row.mesLabel}</td>
+        <td>${numberBR(row.diasAtivos)}</td>
+        <td>${numberBR(row.disponiveis)}</td>
+        <td>${numberBR(row.indisponiveis)}</td>
+        <td>${numberBR(row.horas)}</td>
+        <td><strong>${pctBR(row.disponibilidade)}</strong></td>
+      </tr>`).join('') : '<tr><td colspan="6" class="empty">Sem dados para o filtro</td></tr>';
+    }
+
+    function renderCurrentTable() {
+      const rows = currentRows();
+      $('tableSubtitle').textContent = `${rows.length} veículos`;
+      $('currentBody').innerHTML = rows.length ? rows.map(row => `<tr>
+        <td><span class="plate">${truckSvg()}${row.placa}</span></td>
+        <td>${row.perfil || '-'}</td>
+        <td><span class="pill ${statusClass(row.status)}">${row.status}</span></td>
+        <td>${row.motorista || '-'}</td>
+        <td>${row.observacao || '-'}</td>
+      </tr>`).join('') : '<tr><td colspan="5" class="empty">Sem veículos no filtro</td></tr>';
+    }
+
+    function renderBoard() {
+      const rows = currentRows();
+      const groups = {
+        available: rows.filter(row => boardBucket(row) === 'available'),
+        stopped: rows.filter(row => boardBucket(row) === 'stopped'),
+        maintenance: rows.filter(row => boardBucket(row) === 'maintenance'),
+        unavailable: rows.filter(row => boardBucket(row) === 'unavailable')
+      };
+
+      $('fleetBoard').innerHTML = ['available', 'stopped', 'maintenance', 'unavailable'].map(key => {
+        const meta = bucketMeta(key);
+        const items = groups[key];
+        const tool = key === 'maintenance' ? `<span class="tool-orbit" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M14.5 4.5 19.5 9.5 17.4 11.6 15.9 10.1 8.3 17.7a2.2 2.2 0 0 1-3.1 0l-.9-.9a2.2 2.2 0 0 1 0-3.1l7.6-7.6-1.5-1.5 2.1-2.1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </span>` : '';
+        const cards = items.length ? items.map(row => `<article class="vehicle-card">
+          <div class="vehicle-main">
+            <strong title="${row.placa}">${row.placa}</strong>
+            <span>${row.perfil || '-'}</span>
+          </div>
+          ${state.notices.some(item => item.placa === row.placa) ? `<div class="notice-chip">${state.notices.filter(item => item.placa === row.placa).length} aviso</div>` : ''}
+          <div class="status-actions" data-placa="${row.placa}">
+            <button class="status-action ${row.status === 'Disponível' ? 'active ok' : ''}" type="button" data-status="Disponível" title="Marcar disponível">Disp.</button>
+            <button class="status-action ${row.status === 'Parado' ? 'active warn' : ''}" type="button" data-status="Parado" title="Marcar parado no dia">Parado</button>
+            <button class="status-action ${row.status === 'Em manutenção' ? 'active maint' : ''}" type="button" data-status="Em manutenção" title="Marcar em manutenção">Manut.</button>
+            <button class="status-action ${row.status !== 'Disponível' && row.status !== 'Parado' && row.status !== 'Em manutenção' ? 'active bad' : ''}" type="button" data-status="Indisponível" title="Marcar indisponível">Indisp.</button>
+          </div>
+        </article>`).join('') : '<div class="board-empty">Nenhum veículo neste grupo</div>';
+
+        return `<div class="board-section">
+          <div class="board-title">
+            <span class="pill ${meta.tone}">${meta.badge}</span>
+            ${tool}
+            <h2>${meta.title}</h2>
+            <span class="total">Total: ${items.length}</span>
+          </div>
+          <div class="board-box ${meta.tone}">
+            <p class="board-subtitle">F. Fixa (${items.length})</p>
+            <div class="vehicle-grid">${cards}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function populateNoticePlates() {
+      const rows = raw.current.map(applyOverride).sort((a, b) => a.placa.localeCompare(b.placa));
+      $('noticePlate').innerHTML = rows.map(row => `<option value="${row.placa}">${row.placa} - ${row.perfil || '-'}</option>`).join('');
+    }
+
+    function renderNotices() {
+      $('noticeSubtitle').textContent = `${state.notices.length} aviso${state.notices.length === 1 ? '' : 's'}`;
+      $('noticeList').innerHTML = state.notices.length ? state.notices.map(item => `<article class="notice-item">
+        <strong>${item.placa}</strong>
+        <span>${item.text}</span>
+        <button class="notice-delete" type="button" data-id="${item.id}" title="Excluir aviso">×</button>
+      </article>`).join('') : '<div class="empty">Sem avisos cadastrados</div>';
+    }
+
+    function render() {
+      const rows = filteredBase();
+      updateKpis(rows);
+      drawTrend(rows);
+      drawDonut(rows);
+      drawPareto(rows);
+      renderMonthly(rows);
+      renderCurrentTable();
+      populateNoticePlates();
+      renderNotices();
+      renderBoard();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          state.view = button.dataset.view;
+          document.querySelectorAll('.tab-btn').forEach(item => item.classList.toggle('active', item === button));
+          document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === state.view));
+        });
+      });
+      $('fleetBoard').addEventListener('click', async event => {
+        const button = event.target.closest('.status-action');
+        if (!button) return;
+        const placa = button.closest('.status-actions')?.dataset.placa;
+        const status = button.dataset.status;
+        if (!placa || !status) return;
+        button.disabled = true;
+        await persistOverride(placa, status);
+        render();
+      });
+      $('noticeSave').addEventListener('click', async () => {
+        const placa = $('noticePlate').value;
+        const text = $('noticeText').value;
+        await persistNotice(placa, text);
+        $('noticeText').value = '';
+        render();
+      });
+      $('noticeText').addEventListener('keydown', async event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        const placa = $('noticePlate').value;
+        const text = $('noticeText').value;
+        await persistNotice(placa, text);
+        $('noticeText').value = '';
+        render();
+      });
+      $('noticeList').addEventListener('click', async event => {
+        const button = event.target.closest('.notice-delete');
+        if (!button) return;
+        await deleteNotice(button.dataset.id);
+        render();
+      });
+      $('monthFilter').addEventListener('change', event => {
+        state.month = event.target.value;
+        updateWeekOptions();
+        render();
+      });
+      $('weekFilter').addEventListener('change', event => {
+        state.week = event.target.value;
+        render();
+      });
+      $('statusFilter').addEventListener('change', event => {
+        state.status = event.target.value;
+        render();
+      });
+      $('profileFilter').addEventListener('change', event => {
+        state.profile = event.target.value;
+        render();
+      });
+      $('searchFilter').addEventListener('input', event => {
+        state.search = event.target.value;
+        render();
+      });
+      $('resetBtn').addEventListener('click', () => {
+        state.month = '';
+        state.week = '';
+        state.status = '';
+        state.profile = '';
+        state.search = '';
+        $('monthFilter').value = '';
+        $('statusFilter').value = '';
+        $('profileFilter').value = '';
+        $('searchFilter').value = '';
+        updateWeekOptions();
+        render();
+      });
+      $('printBtn').addEventListener('click', () => window.print());
+    }
+
+    async function boot() {
+      if (!raw) {
+        document.body.innerHTML = '<main class="empty">Base de dados não encontrada.</main>';
+        return;
+      }
+      $('timestamp').textContent = `Base: ${raw.meta.ultimaDataBase} | Gerado: ${raw.meta.geradoEm}`;
+      await loadOverrides();
+      await loadNotices();
+      populateFilters();
+      bindEvents();
+      render();
+    }
+
+    boot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+.env
+*.local.json
+__pycache__/
+.python-version
