@@ -40,7 +40,7 @@ ALLOWED_STATUS = {
     STATUS_DEMOBILIZED,
 }
 
-EDIT_ROLES = {"supervisor_frota"}
+EDIT_ROLES = {"supervisor_frota", "supervisor_rota"}
 SESSION_TTL = 12 * 60 * 60
 SESSIONS: dict[str, dict] = {}
 
@@ -354,6 +354,22 @@ def delete_notice(date: str, notice_id: str) -> list[dict]:
     return store.get(date, [])
 
 
+def clear_notices(date: str) -> list[dict]:
+    if USE_SUPABASE:
+        supabase_request(
+            "DELETE",
+            "fleet_maintenance_notices",
+            query={"base_date": f"eq.{date}"},
+            prefer="return=minimal",
+        )
+        return []
+
+    store = load_json(LOCAL_NOTICES, {})
+    store.pop(date, None)
+    save_json(LOCAL_NOTICES, store)
+    return []
+
+
 def get_daily_history_store() -> dict:
     if USE_SUPABASE:
         rows = supabase_request(
@@ -497,6 +513,7 @@ def daily_snapshot_rows() -> list[dict]:
                     "source": "Painel",
                     "osNumber": item.get("osNumber", ""),
                     "statusObservation": item.get("statusObservation", ""),
+                    "notices": item.get("notices") or [],
                     "updatedBy": payload.get("updatedBy", ""),
                     "updatedAt": payload.get("updatedAt", ""),
                 }
@@ -630,31 +647,19 @@ class Handler(SimpleHTTPRequestHandler):
                 return
 
             if parsed.path == "/api/data":
-                user = self.require_user()
-                if not user:
-                    return
                 self.send_json({"data": read_data_payload()})
                 return
 
             if parsed.path == "/api/history":
-                user = self.require_user()
-                if not user:
-                    return
                 self.send_json(history_payload())
                 return
 
             if parsed.path == "/api/overrides":
-                user = self.require_user()
-                if not user:
-                    return
                 date = query.get("date", [""])[0]
                 self.send_json({"date": date, "overrides": get_overrides(date) if date else {}})
                 return
 
             if parsed.path == "/api/notices":
-                user = self.require_user()
-                if not user:
-                    return
                 date = query.get("date", [""])[0]
                 self.send_json({"date": date, "notices": get_notices(date) if date else []})
                 return
@@ -770,6 +775,7 @@ class Handler(SimpleHTTPRequestHandler):
                     return
                 payload = read_request_json(self)
                 date = parse_date_br(payload.get("date", ""))
+                notice_date = parse_date_br(payload.get("noticeDate", "")) or date
                 rows = payload.get("rows") or []
                 if not date or not isinstance(rows, list):
                     self.send_json({"error": "dados invalidos"}, 400)
@@ -780,6 +786,10 @@ class Handler(SimpleHTTPRequestHandler):
                     status = normalize_status(row.get("status", ""))
                     if status not in ALLOWED_STATUS:
                         continue
+                    raw_notices = row.get("notices") or []
+                    if isinstance(raw_notices, str):
+                        raw_notices = [raw_notices]
+                    notices = [str(item).strip() for item in raw_notices if str(item).strip()]
                     clean_rows.append(
                         {
                             "placa": str(row.get("placa", "")).strip().upper(),
@@ -789,6 +799,7 @@ class Handler(SimpleHTTPRequestHandler):
                             "observacao": str(row.get("observacao", "")).strip(),
                             "osNumber": str(row.get("osNumber", "")).strip().upper(),
                             "statusObservation": str(row.get("statusObservation", "")).strip(),
+                            "notices": notices,
                         }
                     )
                 if not clean_rows:
@@ -796,7 +807,8 @@ class Handler(SimpleHTTPRequestHandler):
                     return
 
                 save_daily_snapshot(date, clean_rows, user["username"])
-                self.send_json({"ok": True, "date": date, **history_payload()})
+                clear_notices(notice_date)
+                self.send_json({"ok": True, "date": date, "notices": [], **history_payload()})
                 return
         except Exception as exc:
             self.send_json({"error": str(exc)}, 500)

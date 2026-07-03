@@ -7,7 +7,7 @@
     status: '',
     profile: '',
     search: '',
-    view: 'dashboardView',
+    view: 'boardView',
     overrides: {},
     notices: [],
     history: { summary: [], details: [] },
@@ -86,6 +86,42 @@
     });
   }
 
+  function showView(viewId) {
+    state.view = viewId;
+    document.querySelectorAll('.tab-btn').forEach(item => item.classList.toggle('active', item.dataset.view === viewId));
+    document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === viewId));
+  }
+
+  function openLogin() {
+    $('authError').textContent = '';
+    $('authScreen').classList.remove('hidden');
+    setTimeout(() => $('authUser').focus(), 0);
+  }
+
+  function closeLogin() {
+    $('authScreen').classList.add('hidden');
+    $('authPassword').value = '';
+    $('authError').textContent = '';
+  }
+
+  function setAuthUi() {
+    const logged = Boolean(state.session);
+    $('authScreen').classList.add('hidden');
+    $('appShell').classList.remove('locked');
+    document.body.classList.toggle('public-mode', !logged);
+    $('userBadge').textContent = logged
+      ? `${state.session.name}${canEdit() ? ' | edição' : ' | leitura'}`
+      : 'Modo leitura';
+    $('loginOpenBtn').style.display = logged ? 'none' : '';
+    $('logoutBtn').style.display = logged ? '' : 'none';
+    document.querySelectorAll('.editor-only').forEach(element => {
+      element.style.display = canEdit() ? '' : 'none';
+    });
+    if (!logged) {
+      showView('boardView');
+    }
+  }
+
   async function api(path, options = {}) {
     const response = await fetch(path, {
       cache: 'no-store',
@@ -95,7 +131,7 @@
         ...(options.headers || {})
       }
     });
-    if (response.status === 401) {
+    if (response.status === 401 && !path.endsWith('/api/login')) {
       state.session = null;
       setAuthUi();
       throw new Error('Sessão expirada');
@@ -221,6 +257,12 @@
   async function saveDailySnapshot() {
     if (!canEdit()) return;
     const date = $('dailyDate').value || todayIso();
+    const noticesByPlate = state.notices.reduce((map, item) => {
+      const placa = item.placa || '';
+      if (!map.has(placa)) map.set(placa, []);
+      if (item.text) map.get(placa).push(item.text);
+      return map;
+    }, new Map());
     const rows = raw.current.map(applyOverride).map(row => ({
       placa: row.placa,
       perfil: row.perfil,
@@ -228,19 +270,21 @@
       motorista: row.motorista,
       observacao: row.observacao,
       osNumber: row.osNumber || '',
-      statusObservation: row.statusObservation || ''
+      statusObservation: row.statusObservation || '',
+      notices: noticesByPlate.get(row.placa) || []
     }));
     const payload = await api('/api/daily-update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, rows })
+      body: JSON.stringify({ date, noticeDate: raw.meta.ultimaDataBaseIso, rows })
     });
     state.history = {
       summary: payload.summary || [],
       details: payload.details || []
     };
+    state.notices = payload.notices || [];
     state.historyDate = date;
-    renderHistory();
+    render();
     $('timestamp').textContent = `Dia ${formatDateBR(date)} atualizado no histórico`;
   }
 
@@ -280,9 +324,12 @@
   }
 
   function evidenceText(row) {
-    if (row.osNumber) return `OS ${escapeHtml(row.osNumber)}`;
-    if (row.statusObservation) return `Sem OS: ${escapeHtml(row.statusObservation)}`;
-    return '-';
+    const parts = [];
+    if (row.osNumber) parts.push(`OS ${escapeHtml(row.osNumber)}`);
+    if (row.statusObservation) parts.push(`Sem OS: ${escapeHtml(row.statusObservation)}`);
+    const notices = Array.isArray(row.notices) ? row.notices : (row.notices ? [row.notices] : []);
+    notices.filter(Boolean).forEach(item => parts.push(`Aviso: ${escapeHtml(item)}`));
+    return parts.length ? parts.join(' | ') : '-';
   }
 
   function matchesFilters(row) {
@@ -563,20 +610,17 @@
         </svg>
       </span>` : '';
       const cards = items.length ? items.map(row => {
-        const noticeCount = state.notices.filter(item => item.placa === row.placa).length;
         const actions = canEdit() ? `<div class="status-actions" data-placa="${escapeHtml(row.placa)}">
           <button class="status-action ${normalizeStatus(row.status) === 'Disponível' ? 'active ok' : ''}" type="button" data-status="Disponível" title="Marcar disponível">Disp.</button>
           <button class="status-action ${normalizeStatus(row.status) === 'Parado' ? 'active warn' : ''}" type="button" data-status="Parado" title="Marcar parado no dia">Parado</button>
           <button class="status-action ${normalizeStatus(row.status) === 'Em manutenção' ? 'active maint' : ''}" type="button" data-status="Em manutenção" title="Marcar em manutenção">Manut.</button>
           <button class="status-action ${!['Disponível', 'Parado', 'Em manutenção'].includes(normalizeStatus(row.status)) ? 'active bad' : ''}" type="button" data-status="Indisponível" title="Marcar indisponível">Indisp.</button>
-        </div>` : '<div class="readonly-note">Somente leitura</div>';
+        </div>` : '';
         return `<article class="vehicle-card">
           <div class="vehicle-main">
             <strong title="${escapeHtml(row.placa)}">${escapeHtml(row.placa)}</strong>
             <span>${escapeHtml(row.perfil || '-')}</span>
           </div>
-          ${noticeCount ? `<div class="notice-chip">${noticeCount} aviso</div>` : ''}
-          ${evidenceText(row) !== '-' ? `<div class="notice-chip">${evidenceText(row)}</div>` : ''}
           ${actions}
         </article>`;
       }).join('') : '<div class="board-empty">Nenhum veículo neste grupo</div>';
@@ -705,12 +749,15 @@
         $('authError').textContent = error.message;
       }
     });
+    $('loginOpenBtn').addEventListener('click', openLogin);
+    $('authClose').addEventListener('click', closeLogin);
+    $('authScreen').addEventListener('click', event => {
+      if (event.target === $('authScreen')) closeLogin();
+    });
 
     document.querySelectorAll('.tab-btn').forEach(button => {
       button.addEventListener('click', () => {
-        state.view = button.dataset.view;
-        document.querySelectorAll('.tab-btn').forEach(item => item.classList.toggle('active', item === button));
-        document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === state.view));
+        showView(button.dataset.view);
       });
     });
 
@@ -819,10 +866,8 @@
 
   async function boot() {
     bindEvents();
-    const session = await loadSession();
-    if (session) {
-      await startApp();
-    }
+    await loadSession();
+    await startApp();
   }
 
   boot();

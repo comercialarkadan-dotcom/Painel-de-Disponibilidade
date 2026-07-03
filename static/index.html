@@ -44,16 +44,19 @@
       min-height: 100vh;
     }
 
-    .app.locked { display: none; }
+    .app.locked { display: block; }
 
     .auth-screen {
-      min-height: 100vh;
+      position: fixed;
+      inset: 0;
+      z-index: 80;
       display: grid;
       place-items: center;
       padding: 24px;
       background:
-        linear-gradient(135deg, rgba(23,63,70,.94), rgba(42,167,121,.82)),
-        #173f46;
+        linear-gradient(135deg, rgba(23,63,70,.74), rgba(42,167,121,.54)),
+        rgba(8, 20, 24, .54);
+      backdrop-filter: blur(4px);
     }
 
     .auth-screen.hidden { display: none; }
@@ -88,6 +91,13 @@
       font-weight: 800;
     }
 
+    .login-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
     .primary-btn,
     .top-btn {
       height: 38px;
@@ -110,6 +120,14 @@
     }
 
     .top-btn.secondary:hover { background: rgba(255,255,255,.16); }
+
+    .top-btn.ghost {
+      background: #ffffff;
+      color: #1f6f64;
+      border-color: #ffffff;
+    }
+
+    .top-btn.ghost:hover { background: #e8f5f1; }
 
     .top-field {
       height: 38px;
@@ -296,6 +314,18 @@
     .view.active {
       display: grid;
       gap: 16px;
+    }
+
+    body.public-mode .filters,
+    body.public-mode .tabs,
+    body.public-mode #dashboardView,
+    body.public-mode #historyView,
+    body.public-mode .notice-panel {
+      display: none;
+    }
+
+    body.public-mode main {
+      margin-top: 22px;
     }
 
     .kpis {
@@ -964,11 +994,11 @@
   </style>
 </head>
 <body>
-  <section class="auth-screen" id="authScreen">
+  <section class="auth-screen hidden" id="authScreen">
     <form class="login-card" id="loginForm">
       <div>
-        <h1>Disponibilidade da Frota</h1>
-        <p>CDD Cascavel</p>
+        <h1>Acesso de edição</h1>
+        <p>Supervisor de Frota ou Supervisor de Rota</p>
       </div>
       <div class="field">
         <label for="authUser">UsuÃ¡rio</label>
@@ -979,7 +1009,10 @@
         <input id="authPassword" type="password" autocomplete="current-password" required />
       </div>
       <div class="login-error" id="authError"></div>
-      <button class="primary-btn" type="submit">Entrar</button>
+      <div class="login-actions">
+        <button class="ghost-btn" id="authClose" type="button">Cancelar</button>
+        <button class="primary-btn" type="submit">Entrar</button>
+      </div>
     </form>
   </section>
 
@@ -1009,7 +1042,7 @@
     </section>
   </div>
 
-  <div class="app locked" id="appShell">
+  <div class="app" id="appShell">
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
@@ -1030,6 +1063,7 @@
         <span class="user-chip" id="userBadge">--</span>
         <input class="top-field editor-only" id="dailyDate" type="date" title="Data da disponibilidade" />
         <button class="top-btn editor-only" id="dailyUpdateBtn" type="button">Atualizar dia</button>
+        <button class="top-btn ghost" id="loginOpenBtn" type="button">Entrar</button>
         <button class="top-btn secondary" id="logoutBtn" type="button">Sair</button>
         <button class="icon-btn" id="printBtn" title="Imprimir ou salvar em PDF" aria-label="Imprimir">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -1261,7 +1295,7 @@
                   <th>Perfil</th>
                   <th>Status</th>
                   <th>Motorista</th>
-                  <th>OS / Obs.</th>
+                  <th>OS / Obs. / Avisos</th>
                 </tr>
               </thead>
               <tbody id="historyDetailBody"></tbody>
