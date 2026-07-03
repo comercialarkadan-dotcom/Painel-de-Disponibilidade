@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "python app.py"
+    "start": "python3 app.py"
   }
 }
