@@ -1,41 +1,46 @@
 # Disponibilidade da Frota - Render + Supabase
 
-## 1. Supabase
+## 1. Criar as tabelas no Supabase
 
 1. Abra o projeto no Supabase.
-2. Vá em **SQL Editor**.
-3. Cole e execute o conteúdo de `supabase_schema.sql`.
-4. Em **Project Settings > API**, copie:
-   - `Project URL`
-   - `service_role key`
+2. Entre em **SQL Editor**.
+3. Cole e execute o arquivo `supabase_schema.sql`.
 
-## 2. Render
+As tabelas gravam:
 
-Configuração do serviço:
+- `fleet_status_overrides`: mudancas de status do dia, OS e observacao quando nao houver OS.
+- `fleet_maintenance_notices`: avisos do Supervisor de Manutencao.
+- `fleet_daily_history`: fotografia diaria para historico de disponibilidade.
+
+## 2. Configurar o Render
+
+Configuracao do servico:
 
 - Runtime: `Python`
 - Build Command: `pip install -r requirements.txt`
 - Start Command: `python app.py`
-- Root Directory: deixe em branco, porque este repositório já foi publicado com o app na raiz.
+- Plano: pode ser `Free`
 
-Variáveis de ambiente no Render:
+Variaveis de ambiente:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY`
+- `SUPABASE_PUBLISHABLE_KEY` opcional
+- `SUPABASE_JWKS_URL` opcional
 
-## 3. Funcionamento
+Use a chave secreta somente no Render. Nao coloque a `SUPABASE_SECRET_KEY` dentro do HTML ou JavaScript do navegador.
 
-- O Render serve o painel web.
-- O Supabase grava:
-  - alterações de status do dia em `fleet_status_overrides`
-  - avisos da manutenção em `fleet_maintenance_notices`
-- Se as variáveis do Supabase não estiverem configuradas, o app roda localmente usando JSON.
+## 3. Usuarios do painel
 
-## 4. Teste Local
+- `supervisor.frota` / senha definida no backend: consegue alterar status, salvar atualizacao diaria e cadastrar avisos.
+- `supervisor.rota` / senha definida no backend: acesso somente leitura.
+
+## 4. Teste local
 
 ```powershell
 cd "C:\Users\ArT\Documents\AUTOMATIZAR GINFO\render-supabase"
 $env:PORT="8788"
+$env:DISABLE_SUPABASE="1"
 python app.py
 ```
 
@@ -44,3 +49,5 @@ Abra:
 ```text
 http://127.0.0.1:8788/
 ```
+
+Se as variaveis do Supabase nao estiverem configuradas, o app usa arquivos `*.local.json` apenas para teste local.

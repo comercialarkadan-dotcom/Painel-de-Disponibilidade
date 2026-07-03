@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Disponibilidade da Frota | CDD Cascavel</title>
-  <script src="data.js"></script>
   <style>
     :root {
       --bg: #eef3f5;
@@ -43,6 +42,97 @@
 
     .app {
       min-height: 100vh;
+    }
+
+    .app.locked { display: none; }
+
+    .auth-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(23,63,70,.94), rgba(42,167,121,.82)),
+        #173f46;
+    }
+
+    .auth-screen.hidden { display: none; }
+
+    .login-card {
+      width: min(420px, 100%);
+      background: #ffffff;
+      border: 1px solid rgba(255,255,255,.45);
+      border-radius: 8px;
+      box-shadow: 0 24px 54px rgba(8, 20, 24, .28);
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .login-card h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .login-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .login-error {
+      min-height: 18px;
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .primary-btn,
+    .top-btn {
+      height: 38px;
+      border: 1px solid #1f6f64;
+      border-radius: 6px;
+      background: #1f6f64;
+      color: #ffffff;
+      font-weight: 800;
+      padding: 0 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .primary-btn:hover,
+    .top-btn:hover { background: #18584f; }
+
+    .top-btn.secondary {
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.25);
+    }
+
+    .top-btn.secondary:hover { background: rgba(255,255,255,.16); }
+
+    .top-field {
+      height: 38px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 6px;
+      background: rgba(255,255,255,.1);
+      color: #ffffff;
+      padding: 0 9px;
+      color-scheme: dark;
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.22);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .topbar {
@@ -703,6 +793,91 @@
       font-weight: 900;
     }
 
+    .readonly-note {
+      grid-column: 1 / -1;
+      min-height: 28px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: #f7fafb;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(16, 29, 35, .58);
+    }
+
+    .modal-backdrop[hidden] { display: none; }
+
+    .modal-card {
+      width: min(520px, 100%);
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: 0 28px 70px rgba(8, 20, 24, .32);
+      overflow: hidden;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .modal-body textarea {
+      width: 100%;
+      min-height: 86px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      background: #f7fafb;
+    }
+
+    .ghost-btn {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      font-weight: 800;
+      padding: 0 13px;
+      cursor: pointer;
+    }
+
+    .history-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .history-toolbar select {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: #ffffff;
+    }
+
     .board-empty {
       border: 1px dashed var(--line);
       border-radius: 8px;
@@ -789,7 +964,52 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <section class="auth-screen" id="authScreen">
+    <form class="login-card" id="loginForm">
+      <div>
+        <h1>Disponibilidade da Frota</h1>
+        <p>CDD Cascavel</p>
+      </div>
+      <div class="field">
+        <label for="authUser">UsuÃ¡rio</label>
+        <input id="authUser" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="authPassword">Senha</label>
+        <input id="authPassword" type="password" autocomplete="current-password" required />
+      </div>
+      <div class="login-error" id="authError"></div>
+      <button class="primary-btn" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <div class="modal-backdrop" id="statusModal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="statusModalTitle">Atualizar status</h2>
+          <span id="statusModalSubtitle">--</span>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="statusOsInput">NÃºmero da OS</label>
+          <input id="statusOsInput" placeholder="Ex.: 12345" />
+        </div>
+        <div class="field">
+          <label for="statusObsInput">ObservaÃ§Ã£o sem OS</label>
+          <textarea id="statusObsInput" placeholder="ObrigatÃ³rio quando nÃ£o houver OS"></textarea>
+        </div>
+        <div class="login-error" id="statusModalError"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-btn" id="statusCancel" type="button">Cancelar</button>
+        <button class="primary-btn" id="statusConfirm" type="button">Salvar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="app locked" id="appShell">
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
@@ -807,6 +1027,10 @@
       </div>
       <div class="top-actions">
         <div class="timestamp" id="timestamp">Base carregando</div>
+        <span class="user-chip" id="userBadge">--</span>
+        <input class="top-field editor-only" id="dailyDate" type="date" title="Data da disponibilidade" />
+        <button class="top-btn editor-only" id="dailyUpdateBtn" type="button">Atualizar dia</button>
+        <button class="top-btn secondary" id="logoutBtn" type="button">Sair</button>
         <button class="icon-btn" id="printBtn" title="Imprimir ou salvar em PDF" aria-label="Imprimir">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -854,6 +1078,7 @@
       <section class="tabs" aria-label="NavegaÃ§Ã£o do painel">
         <button class="tab-btn active" type="button" data-view="dashboardView">Painel</button>
         <button class="tab-btn" type="button" data-view="boardView">Quadro da frota</button>
+        <button class="tab-btn" type="button" data-view="historyView">HistÃ³rico</button>
       </section>
 
       <div id="dashboardView" class="view active">
@@ -984,7 +1209,7 @@
             <h2>Avisos da manutenção</h2>
             <span id="noticeSubtitle">Supervisor de Manutenção</span>
           </div>
-          <div class="notice-form">
+          <div class="notice-form editor-only" id="noticeForm">
             <select id="noticePlate" aria-label="Placa do aviso"></select>
             <input id="noticeText" type="text" placeholder="Aviso sobre o caminhão" />
             <button id="noticeSave" type="button">Adicionar</button>
@@ -994,595 +1219,61 @@
         <section class="fleet-board" id="fleetBoard" aria-label="Quadro de disponibilidade da frota"></section>
       </div>
 
+      <div id="historyView" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>HistÃ³rico de disponibilidade</h2>
+              <span id="historySubtitle">Base da planilha e atualizaÃ§Ãµes do painel</span>
+            </div>
+            <div class="history-toolbar">
+              <select id="historyDate" aria-label="Data do histÃ³rico"></select>
+            </div>
+          </div>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Total</th>
+                  <th>DisponÃ­veis</th>
+                  <th>Parados</th>
+                  <th>Manut.</th>
+                  <th>Indisp.</th>
+                  <th>Disp.</th>
+                  <th>Fonte</th>
+                </tr>
+              </thead>
+              <tbody id="historySummaryBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Detalhe do dia</h2>
+            <span id="historyDetailSubtitle">--</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Perfil</th>
+                  <th>Status</th>
+                  <th>Motorista</th>
+                  <th>OS / Obs.</th>
+                </tr>
+              </thead>
+              <tbody id="historyDetailBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
       <div class="footer-note">CDD Cascavel | Disponibilidade operacional da frota</div>
     </main>
   </div>
 
-  <script>
-    const raw = window.DISPONIBILIDADE_DATA;
-    const state = { month: '', week: '', status: '', profile: '', search: '', view: 'dashboardView', overrides: {}, notices: [], sharedSave: false };
-    const colors = {
-      ok: '#24865a',
-      bad: '#b94141',
-      warn: '#c78a22',
-      off: '#667783',
-      blue: '#366f9f',
-      violet: '#6f5aa7'
-    };
-
-    const $ = (id) => document.getElementById(id);
-
-    function storageKey() {
-      return `disp-frota-overrides-${raw.meta.ultimaDataBaseIso || raw.meta.ultimaDataBase}`;
-    }
-
-    function noticesKey() {
-      return `disp-frota-notices-${raw.meta.ultimaDataBaseIso || raw.meta.ultimaDataBase}`;
-    }
-
-    async function loadOverrides() {
-      try {
-        const response = await fetch(`/api/overrides?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}`, { cache: 'no-store' });
-        if (response.ok) {
-          const payload = await response.json();
-          state.overrides = payload.overrides || {};
-          state.sharedSave = true;
-          return;
-        }
-      } catch (error) {
-        state.sharedSave = false;
-      }
-      try {
-        state.overrides = JSON.parse(localStorage.getItem(storageKey()) || '{}');
-      } catch (error) {
-        state.overrides = {};
-      }
-    }
-
-    async function persistOverride(placa, status) {
-      state.overrides[placa] = { status, updatedAt: new Date().toISOString() };
-      try {
-        const response = await fetch('/api/overrides', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: raw.meta.ultimaDataBaseIso, placa, status })
-        });
-        if (response.ok) {
-          const payload = await response.json();
-          state.overrides = payload.overrides || state.overrides;
-          state.sharedSave = true;
-          return;
-        }
-      } catch (error) {
-        state.sharedSave = false;
-      }
-      localStorage.setItem(storageKey(), JSON.stringify(state.overrides));
-    }
-
-    function applyOverride(row) {
-      const override = state.overrides[row.placa];
-      if (!override || !override.status) return { ...row, sourceStatus: row.status };
-      return { ...row, sourceStatus: row.status, status: override.status, ajusteManual: true };
-    }
-
-    async function loadNotices() {
-      try {
-        const response = await fetch(`/api/notices?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}`, { cache: 'no-store' });
-        if (response.ok) {
-          const payload = await response.json();
-          state.notices = payload.notices || [];
-          state.sharedSave = true;
-          return;
-        }
-      } catch (error) {
-        state.sharedSave = false;
-      }
-      try {
-        state.notices = JSON.parse(localStorage.getItem(noticesKey()) || '[]');
-      } catch (error) {
-        state.notices = [];
-      }
-    }
-
-    async function persistNotice(placa, text) {
-      const clean = String(text || '').trim();
-      if (!placa || !clean) return;
-      try {
-        const response = await fetch('/api/notices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: raw.meta.ultimaDataBaseIso, placa, text: clean })
-        });
-        if (response.ok) {
-          const payload = await response.json();
-          state.notices = payload.notices || state.notices;
-          state.sharedSave = true;
-          return;
-        }
-      } catch (error) {
-        state.sharedSave = false;
-      }
-      state.notices.unshift({ id: `${Date.now()}`, placa, text: clean, updatedAt: new Date().toISOString() });
-      localStorage.setItem(noticesKey(), JSON.stringify(state.notices));
-    }
-
-    async function deleteNotice(id) {
-      try {
-        const response = await fetch(`/api/notices?date=${encodeURIComponent(raw.meta.ultimaDataBaseIso)}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-        if (response.ok) {
-          const payload = await response.json();
-          state.notices = payload.notices || [];
-          state.sharedSave = true;
-          return;
-        }
-      } catch (error) {
-        state.sharedSave = false;
-      }
-      state.notices = state.notices.filter(item => item.id !== id);
-      localStorage.setItem(noticesKey(), JSON.stringify(state.notices));
-    }
-
-    function numberBR(value, digits = 0) {
-      return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value || 0);
-    }
-
-    function pctBR(value) {
-      return `${numberBR((value || 0) * 100, 1)}%`;
-    }
-
-    function statusClass(status) {
-      if (status === 'Disponível') return 'ok';
-      if (status === 'Parado') return 'warn';
-      if (status === 'Em manutenção') return 'maint';
-      if (status === 'Desmobilizada') return 'off';
-      return 'bad';
-    }
-
-    function statusColor(status) {
-      const type = statusClass(status);
-      return type === 'ok' ? colors.ok : type === 'warn' ? colors.warn : type === 'maint' ? colors.violet : type === 'off' ? colors.off : colors.bad;
-    }
-
-    function boardBucket(row) {
-      if (row.status === 'Disponível') return 'available';
-      if (row.status === 'Parado') return 'stopped';
-      if (row.status === 'Em manutenção') return 'maintenance';
-      return 'unavailable';
-    }
-
-    function bucketMeta(key) {
-      const map = {
-        available: { title: 'Disponíveis', badge: 'Disponível', tone: 'ok' },
-        stopped: { title: 'Paradas', badge: 'Parado', tone: 'warn' },
-        maintenance: { title: 'Em manutenção', badge: 'Manutenção', tone: 'maint' },
-        unavailable: { title: 'Indisponíveis', badge: 'Indisponível', tone: 'bad' }
-      };
-      return map[key];
-    }
-
-    function truckSvg() {
-      return `<svg class="truck-icon" viewBox="0 0 28 20" aria-hidden="true"><path d="M2 13h3l2-6h11l4 6h4v3h-3a3 3 0 0 1-6 0H11a3 3 0 0 1-6 0H2v-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="16" r="1.7" fill="currentColor"/><circle cx="20" cy="16" r="1.7" fill="currentColor"/></svg>`;
-    }
-
-    function matchesFilters(row) {
-      const haystack = `${row.placa} ${row.perfil} ${row.motorista} ${row.observacao} ${row.motivo}`.toLowerCase();
-      return (!state.month || row.mes === state.month)
-        && (!state.week || String(row.semanaMes) === state.week)
-        && (!state.status || row.status === state.status)
-        && (!state.profile || row.perfil === state.profile)
-        && (!state.search || haystack.includes(state.search.toLowerCase()));
-    }
-
-    function matchesCurrentFilters(row) {
-      const haystack = `${row.placa} ${row.perfil} ${row.motorista} ${row.observacao}`.toLowerCase();
-      return (!state.status || row.status === state.status)
-        && (!state.profile || row.perfil === state.profile)
-        && (!state.search || haystack.includes(state.search.toLowerCase()));
-    }
-
-    function filteredBase() {
-      return raw.base.filter(matchesFilters);
-    }
-
-    function activeRows(rows) {
-      return rows.filter(row => row.ativo === 1);
-    }
-
-    function summarizeRows(rows) {
-      const active = activeRows(rows);
-      const diasAtivos = active.reduce((sum, row) => sum + row.ativo, 0);
-      const disponiveis = active.reduce((sum, row) => sum + row.disponivel, 0);
-      const indisponiveis = active.reduce((sum, row) => sum + row.indisponivel, 0);
-      const horas = active.reduce((sum, row) => sum + row.horasIndisp, 0);
-      return {
-        diasAtivos,
-        disponiveis,
-        indisponiveis,
-        horas,
-        disponibilidade: diasAtivos ? disponiveis / diasAtivos : 0
-      };
-    }
-
-    function groupBy(rows, keyFn) {
-      const map = new Map();
-      rows.forEach(row => {
-        const key = keyFn(row);
-        if (!map.has(key)) map.set(key, []);
-        map.get(key).push(row);
-      });
-      return map;
-    }
-
-    function populateFilters() {
-      const months = [...new Map(raw.base.map(row => [row.mes, row.mesLabel])).entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]));
-      $('monthFilter').innerHTML = '<option value="">Todos</option>' + months.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
-
-      const profiles = [...new Set(raw.base.map(row => row.perfil).filter(Boolean))].sort();
-      $('profileFilter').innerHTML = '<option value="">Todos</option>' + profiles.map(profile => `<option value="${profile}">${profile}</option>`).join('');
-      updateWeekOptions();
-    }
-
-    function updateWeekOptions() {
-      const rows = state.month ? raw.base.filter(row => row.mes === state.month) : raw.base;
-      const weeks = [...new Map(rows.map(row => [row.semanaMes, row.semanaLabel])).entries()]
-        .filter(([value]) => value)
-        .sort((a, b) => Number(a[0]) - Number(b[0]));
-      const current = state.week;
-      $('weekFilter').innerHTML = '<option value="">Todas</option>' + weeks.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
-      if (weeks.some(([value]) => String(value) === current)) {
-        $('weekFilter').value = current;
-      } else {
-        state.week = '';
-        $('weekFilter').value = '';
-      }
-    }
-
-    function updateKpis(rows) {
-      const summary = summarizeRows(rows);
-      const current = currentRows();
-      const currentAvailable = current.filter(row => row.status === 'Disponível').length;
-      const currentUnavailable = current.filter(row => row.status !== 'Disponível' && row.status !== 'Parado').length;
-      $('kpiDisponibilidade').textContent = pctBR(summary.disponibilidade);
-      $('kpiDisponibilidadeSub').textContent = `${numberBR(summary.diasAtivos)} dias-veículo considerados`;
-      $('kpiAtivos').textContent = numberBR(current.length);
-      $('kpiAtivosSub').textContent = `Base ${raw.meta.ultimaDataBase}`;
-      $('kpiDisponiveis').textContent = numberBR(currentAvailable);
-      $('kpiIndisp').textContent = numberBR(currentUnavailable);
-      $('kpiIndispSub').textContent = 'Na última data da base';
-      $('kpiHoras').textContent = numberBR(summary.horas);
-    }
-
-    function weeklyRows(rows) {
-      const grouped = groupBy(activeRows(rows), row => `${row.mes}|${row.mesLabel}|${row.semanaMes}|${row.semanaLabel}`);
-      return [...grouped.entries()].map(([key, values]) => {
-        const [mes, mesLabel, semanaMes, semanaLabel] = key.split('|');
-        const sum = summarizeRows(values);
-        return {
-          mes,
-          mesLabel,
-          semanaMes: Number(semanaMes),
-          semanaLabel,
-          label: `${mesLabel} ${semanaLabel}`,
-          disponibilidade: sum.disponibilidade,
-          diasIndisponiveis: sum.indisponiveis,
-          horasIndisp: sum.horas
-        };
-      }).sort((a, b) => a.mes.localeCompare(b.mes) || a.semanaMes - b.semanaMes);
-    }
-
-    function monthlyRows(rows) {
-      const grouped = groupBy(activeRows(rows), row => `${row.mes}|${row.mesLabel}`);
-      return [...grouped.entries()].map(([key, values]) => {
-        const [mes, mesLabel] = key.split('|');
-        const sum = summarizeRows(values);
-        return { mes, mesLabel, ...sum };
-      }).sort((a, b) => a.mes.localeCompare(b.mes));
-    }
-
-    function paretoRows(rows) {
-      const grouped = groupBy(activeRows(rows), row => row.placa);
-      return [...grouped.entries()].map(([placa, values]) => {
-        const sum = summarizeRows(values);
-        const profile = values.find(row => row.perfil)?.perfil || '';
-        const reasons = {};
-        values.filter(row => row.indisponivel).forEach(row => {
-          const reason = row.motivo || row.status || 'Sem motivo';
-          reasons[reason] = (reasons[reason] || 0) + 1;
-        });
-        const mainReason = Object.entries(reasons).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
-        return { placa, perfil: profile, motivoPrincipal: mainReason, ...sum };
-      }).sort((a, b) => (b.horas - a.horas) || (b.indisponiveis - a.indisponiveis));
-    }
-
-    function currentRows() {
-      return raw.current.map(applyOverride).filter(row => {
-        return matchesCurrentFilters(row);
-      }).sort((a, b) => {
-        const rank = { 'Indisponível': 0, 'Em manutenção': 1, 'Parado': 2, 'Disponível': 3, 'Desmobilizada': 4 };
-        return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || a.perfil.localeCompare(b.perfil) || a.placa.localeCompare(b.placa);
-      });
-    }
-
-    function drawTrend(rows) {
-      const data = weeklyRows(rows);
-      $('trendSubtitle').textContent = data.length ? `${data.length} semanas no filtro` : 'Sem dados';
-      const svg = $('trendChart');
-      const w = 900, h = 280, pad = { left: 46, right: 18, top: 22, bottom: 48 };
-      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-      svg.innerHTML = '';
-      if (!data.length) {
-        svg.innerHTML = `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#667783">Sem dados para o filtro</text>`;
-        return;
-      }
-
-      const minY = Math.max(0.75, Math.min(...data.map(d => d.disponibilidade)) - 0.04);
-      const maxY = 1;
-      const x = i => pad.left + (data.length === 1 ? 0 : i * (w - pad.left - pad.right) / (data.length - 1));
-      const y = v => pad.top + (maxY - v) * (h - pad.top - pad.bottom) / (maxY - minY || 1);
-      const axis = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      for (let i = 0; i <= 4; i++) {
-        const value = minY + (maxY - minY) * i / 4;
-        const yy = y(value);
-        axis.insertAdjacentHTML('beforeend', `<line x1="${pad.left}" y1="${yy}" x2="${w - pad.right}" y2="${yy}" stroke="#d9e3e8"/><text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#667783">${pctBR(value)}</text>`);
-      }
-      svg.appendChild(axis);
-
-      const path = data.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(d.disponibilidade).toFixed(1)}`).join(' ');
-      svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1f6f64" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`);
-      data.forEach((d, i) => {
-        const showLabel = data.length <= 12 || i % Math.ceil(data.length / 10) === 0 || i === data.length - 1;
-        svg.insertAdjacentHTML('beforeend', `<circle cx="${x(i)}" cy="${y(d.disponibilidade)}" r="5" fill="#fff" stroke="#1f6f64" stroke-width="3"><title>${d.label}: ${pctBR(d.disponibilidade)}</title></circle>`);
-        if (showLabel) {
-          svg.insertAdjacentHTML('beforeend', `<text x="${x(i)}" y="${h - 24}" text-anchor="middle" font-size="10" fill="#667783">${d.semanaLabel}</text><text x="${x(i)}" y="${h - 10}" text-anchor="middle" font-size="10" fill="#667783">${d.mesLabel}</text>`);
-        }
-      });
-    }
-
-    function drawDonut(rows) {
-      const current = currentRows();
-      const counts = current.reduce((acc, row) => {
-        acc[row.status] = (acc[row.status] || 0) + 1;
-        return acc;
-      }, {});
-      const entries = Object.entries(counts).filter(([, count]) => count > 0);
-      const total = entries.reduce((sum, [, count]) => sum + count, 0);
-      $('statusSubtitle').textContent = `${total} veículos na visão atual`;
-      const svg = $('donutChart');
-      svg.innerHTML = '';
-      if (!total) {
-        svg.innerHTML = '<text x="80" y="82" text-anchor="middle" fill="#667783">Sem dados</text>';
-        $('statusLegend').innerHTML = '';
-        return;
-      }
-      const cx = 80, cy = 80, r = 56, circumference = 2 * Math.PI * r;
-      let offset = 0;
-      entries.forEach(([status, count]) => {
-        const ratio = count / total;
-        const dash = ratio * circumference;
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', cx);
-        circle.setAttribute('cy', cy);
-        circle.setAttribute('r', r);
-        circle.setAttribute('fill', 'none');
-        circle.setAttribute('stroke', statusColor(status));
-        circle.setAttribute('stroke-width', '24');
-        circle.setAttribute('stroke-dasharray', `${dash} ${circumference - dash}`);
-        circle.setAttribute('stroke-dashoffset', `${-offset}`);
-        circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
-        circle.innerHTML = `<title>${status}: ${count}</title>`;
-        svg.appendChild(circle);
-        offset += dash;
-      });
-      svg.insertAdjacentHTML('beforeend', `<circle cx="${cx}" cy="${cy}" r="38" fill="#fff"/><text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="24" font-weight="800" fill="#20313b">${total}</text><text x="${cx}" y="${cy + 17}" text-anchor="middle" font-size="11" fill="#667783">veículos</text>`);
-      $('statusLegend').innerHTML = entries.map(([status, count]) => `<div class="legend-item"><span class="dot" style="background:${statusColor(status)}"></span><span>${status}</span><strong>${count}</strong></div>`).join('');
-    }
-
-    function drawPareto(rows) {
-      const data = paretoRows(rows).filter(row => row.horas > 0).slice(0, 10);
-      const max = Math.max(...data.map(row => row.horas), 1);
-      $('paretoSubtitle').textContent = data.length ? `Top ${data.length}` : 'Sem indisponibilidade';
-      $('paretoBars').innerHTML = data.length ? data.map(row => {
-        const width = Math.max(3, row.horas / max * 100);
-        return `<div class="bar-row">
-          <div class="bar-label"><strong>${row.placa}</strong><span>${row.perfil || row.motivoPrincipal || ''}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div>
-          <div class="bar-value">${numberBR(row.horas)}h</div>
-        </div>`;
-      }).join('') : '<div class="empty">Sem horas indisponíveis no filtro</div>';
-
-      const offenders = data.slice(0, 5);
-      $('offenderList').innerHTML = offenders.length ? offenders.map(row => `<div class="mini-row"><div><strong>${row.placa}</strong><br><span>${row.motivoPrincipal || row.perfil}</span></div><strong>${numberBR(row.horas)}h</strong></div>`).join('') : '<div class="empty">Sem ofensores no filtro</div>';
-    }
-
-    function renderMonthly(rows) {
-      const data = monthlyRows(rows);
-      $('monthlyBody').innerHTML = data.length ? data.map(row => `<tr>
-        <td>${row.mesLabel}</td>
-        <td>${numberBR(row.diasAtivos)}</td>
-        <td>${numberBR(row.disponiveis)}</td>
-        <td>${numberBR(row.indisponiveis)}</td>
-        <td>${numberBR(row.horas)}</td>
-        <td><strong>${pctBR(row.disponibilidade)}</strong></td>
-      </tr>`).join('') : '<tr><td colspan="6" class="empty">Sem dados para o filtro</td></tr>';
-    }
-
-    function renderCurrentTable() {
-      const rows = currentRows();
-      $('tableSubtitle').textContent = `${rows.length} veículos`;
-      $('currentBody').innerHTML = rows.length ? rows.map(row => `<tr>
-        <td><span class="plate">${truckSvg()}${row.placa}</span></td>
-        <td>${row.perfil || '-'}</td>
-        <td><span class="pill ${statusClass(row.status)}">${row.status}</span></td>
-        <td>${row.motorista || '-'}</td>
-        <td>${row.observacao || '-'}</td>
-      </tr>`).join('') : '<tr><td colspan="5" class="empty">Sem veículos no filtro</td></tr>';
-    }
-
-    function renderBoard() {
-      const rows = currentRows();
-      const groups = {
-        available: rows.filter(row => boardBucket(row) === 'available'),
-        stopped: rows.filter(row => boardBucket(row) === 'stopped'),
-        maintenance: rows.filter(row => boardBucket(row) === 'maintenance'),
-        unavailable: rows.filter(row => boardBucket(row) === 'unavailable')
-      };
-
-      $('fleetBoard').innerHTML = ['available', 'stopped', 'maintenance', 'unavailable'].map(key => {
-        const meta = bucketMeta(key);
-        const items = groups[key];
-        const tool = key === 'maintenance' ? `<span class="tool-orbit" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M14.5 4.5 19.5 9.5 17.4 11.6 15.9 10.1 8.3 17.7a2.2 2.2 0 0 1-3.1 0l-.9-.9a2.2 2.2 0 0 1 0-3.1l7.6-7.6-1.5-1.5 2.1-2.1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          </svg>
-        </span>` : '';
-        const cards = items.length ? items.map(row => `<article class="vehicle-card">
-          <div class="vehicle-main">
-            <strong title="${row.placa}">${row.placa}</strong>
-            <span>${row.perfil || '-'}</span>
-          </div>
-          ${state.notices.some(item => item.placa === row.placa) ? `<div class="notice-chip">${state.notices.filter(item => item.placa === row.placa).length} aviso</div>` : ''}
-          <div class="status-actions" data-placa="${row.placa}">
-            <button class="status-action ${row.status === 'Disponível' ? 'active ok' : ''}" type="button" data-status="Disponível" title="Marcar disponível">Disp.</button>
-            <button class="status-action ${row.status === 'Parado' ? 'active warn' : ''}" type="button" data-status="Parado" title="Marcar parado no dia">Parado</button>
-            <button class="status-action ${row.status === 'Em manutenção' ? 'active maint' : ''}" type="button" data-status="Em manutenção" title="Marcar em manutenção">Manut.</button>
-            <button class="status-action ${row.status !== 'Disponível' && row.status !== 'Parado' && row.status !== 'Em manutenção' ? 'active bad' : ''}" type="button" data-status="Indisponível" title="Marcar indisponível">Indisp.</button>
-          </div>
-        </article>`).join('') : '<div class="board-empty">Nenhum veículo neste grupo</div>';
-
-        return `<div class="board-section">
-          <div class="board-title">
-            <span class="pill ${meta.tone}">${meta.badge}</span>
-            ${tool}
-            <h2>${meta.title}</h2>
-            <span class="total">Total: ${items.length}</span>
-          </div>
-          <div class="board-box ${meta.tone}">
-            <p class="board-subtitle">F. Fixa (${items.length})</p>
-            <div class="vehicle-grid">${cards}</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    function populateNoticePlates() {
-      const rows = raw.current.map(applyOverride).sort((a, b) => a.placa.localeCompare(b.placa));
-      $('noticePlate').innerHTML = rows.map(row => `<option value="${row.placa}">${row.placa} - ${row.perfil || '-'}</option>`).join('');
-    }
-
-    function renderNotices() {
-      $('noticeSubtitle').textContent = `${state.notices.length} aviso${state.notices.length === 1 ? '' : 's'}`;
-      $('noticeList').innerHTML = state.notices.length ? state.notices.map(item => `<article class="notice-item">
-        <strong>${item.placa}</strong>
-        <span>${item.text}</span>
-        <button class="notice-delete" type="button" data-id="${item.id}" title="Excluir aviso">×</button>
-      </article>`).join('') : '<div class="empty">Sem avisos cadastrados</div>';
-    }
-
-    function render() {
-      const rows = filteredBase();
-      updateKpis(rows);
-      drawTrend(rows);
-      drawDonut(rows);
-      drawPareto(rows);
-      renderMonthly(rows);
-      renderCurrentTable();
-      populateNoticePlates();
-      renderNotices();
-      renderBoard();
-    }
-
-    function bindEvents() {
-      document.querySelectorAll('.tab-btn').forEach(button => {
-        button.addEventListener('click', () => {
-          state.view = button.dataset.view;
-          document.querySelectorAll('.tab-btn').forEach(item => item.classList.toggle('active', item === button));
-          document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === state.view));
-        });
-      });
-      $('fleetBoard').addEventListener('click', async event => {
-        const button = event.target.closest('.status-action');
-        if (!button) return;
-        const placa = button.closest('.status-actions')?.dataset.placa;
-        const status = button.dataset.status;
-        if (!placa || !status) return;
-        button.disabled = true;
-        await persistOverride(placa, status);
-        render();
-      });
-      $('noticeSave').addEventListener('click', async () => {
-        const placa = $('noticePlate').value;
-        const text = $('noticeText').value;
-        await persistNotice(placa, text);
-        $('noticeText').value = '';
-        render();
-      });
-      $('noticeText').addEventListener('keydown', async event => {
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        const placa = $('noticePlate').value;
-        const text = $('noticeText').value;
-        await persistNotice(placa, text);
-        $('noticeText').value = '';
-        render();
-      });
-      $('noticeList').addEventListener('click', async event => {
-        const button = event.target.closest('.notice-delete');
-        if (!button) return;
-        await deleteNotice(button.dataset.id);
-        render();
-      });
-      $('monthFilter').addEventListener('change', event => {
-        state.month = event.target.value;
-        updateWeekOptions();
-        render();
-      });
-      $('weekFilter').addEventListener('change', event => {
-        state.week = event.target.value;
-        render();
-      });
-      $('statusFilter').addEventListener('change', event => {
-        state.status = event.target.value;
-        render();
-      });
-      $('profileFilter').addEventListener('change', event => {
-        state.profile = event.target.value;
-        render();
-      });
-      $('searchFilter').addEventListener('input', event => {
-        state.search = event.target.value;
-        render();
-      });
-      $('resetBtn').addEventListener('click', () => {
-        state.month = '';
-        state.week = '';
-        state.status = '';
-        state.profile = '';
-        state.search = '';
-        $('monthFilter').value = '';
-        $('statusFilter').value = '';
-        $('profileFilter').value = '';
-        $('searchFilter').value = '';
-        updateWeekOptions();
-        render();
-      });
-      $('printBtn').addEventListener('click', () => window.print());
-    }
-
-    async function boot() {
-      if (!raw) {
-        document.body.innerHTML = '<main class="empty">Base de dados não encontrada.</main>';
-        return;
-      }
-      $('timestamp').textContent = `Base: ${raw.meta.ultimaDataBase} | Gerado: ${raw.meta.geradoEm}`;
-      await loadOverrides();
-      await loadNotices();
-      populateFilters();
-      bindEvents();
-      render();
-    }
-
-    boot();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
