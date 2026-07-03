@@ -615,7 +615,14 @@ class Handler(SimpleHTTPRequestHandler):
 
         try:
             if parsed.path == "/health":
-                self.send_json({"ok": True, "storage": "supabase" if USE_SUPABASE else "local"})
+                self.send_json(
+                    {
+                        "ok": True,
+                        "storage": "supabase" if USE_SUPABASE else "local",
+                        "supabaseUrlConfigured": bool(SUPABASE_URL),
+                        "supabaseKeyConfigured": bool(SUPABASE_KEY),
+                    }
+                )
                 return
 
             if parsed.path == "/api/session":
