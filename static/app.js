@@ -243,6 +243,50 @@
     state.notices = payload.notices || [];
   }
 
+  async function readCsvFile(file) {
+    const buffer = await file.arrayBuffer();
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch (_) {
+      return new TextDecoder('windows-1252').decode(buffer);
+    }
+  }
+
+  async function importCsvFile(file) {
+    if (!canEdit() || !file) return;
+    $('timestamp').textContent = `Importando ${file.name}...`;
+    const content = await readCsvFile(file);
+    const payload = await api('/api/import-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, content })
+    });
+
+    state.month = '';
+    state.week = '';
+    state.status = '';
+    state.profile = '';
+    state.search = '';
+    $('monthFilter').value = '';
+    $('statusFilter').value = '';
+    $('profileFilter').value = '';
+    $('searchFilter').value = '';
+
+    await loadData();
+    $('dailyDate').value = raw.meta.ultimaDataBaseIso || todayIso();
+    await loadOverrides();
+    await loadNotices();
+    await loadHistory();
+    populateFilters();
+    render();
+
+    const counts = payload.summary?.counts || {};
+    const imported = payload.summary?.imported || 0;
+    const ignored = payload.summary?.ignored || 0;
+    $('timestamp').textContent = `CSV ${payload.dateLabel}: ${imported} importados, ${ignored} ignorados`;
+    alert(`CSV importado para ${payload.dateLabel}.\n\nDisponíveis: ${counts['Disponível'] || 0}\nParados: ${counts['Parado'] || 0}\nEm manutenção: ${counts['Em manutenção'] || 0}\nIndisponíveis: ${counts['Indisponível'] || 0}\nIgnorados: ${ignored}`);
+  }
+
   async function loadHistory() {
     const payload = await api('/api/history');
     state.history = {
@@ -753,6 +797,18 @@
     $('authClose').addEventListener('click', closeLogin);
     $('authScreen').addEventListener('click', event => {
       if (event.target === $('authScreen')) closeLogin();
+    });
+    $('csvImportBtn').addEventListener('click', () => $('csvImportInput').click());
+    $('csvImportInput').addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        await importCsvFile(file);
+      } catch (error) {
+        $('timestamp').textContent = 'Falha ao importar CSV';
+        alert(error.message);
+      }
     });
 
     document.querySelectorAll('.tab-btn').forEach(button => {

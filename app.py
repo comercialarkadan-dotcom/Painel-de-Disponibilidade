@@ -3,11 +3,13 @@ from __future__ import annotations
 import csv
 import hashlib
 import hmac
+import io
 import json
 import os
 import re
 import secrets
 import time
+import unicodedata
 import uuid
 from datetime import datetime
 from http import cookies
@@ -106,7 +108,7 @@ def read_request_json(handler: SimpleHTTPRequestHandler) -> dict:
 
 
 def normalize_status(value: str) -> str:
-    clean = str(value or "").strip()
+    clean = clean_text(value)
     fixes = {
         "DisponÃ­vel": STATUS_AVAILABLE,
         "DisponÃƒÂ­vel": STATUS_AVAILABLE,
@@ -169,6 +171,282 @@ def read_data_payload() -> dict:
     if not match:
         return {}
     return json.loads(match.group(1))
+
+
+MOJIBAKE_FIXES = {
+    "Ã¡": "á",
+    "Ã©": "é",
+    "Ã­": "í",
+    "Ã³": "ó",
+    "Ãº": "ú",
+    "Ã¢": "â",
+    "Ãª": "ê",
+    "Ã´": "ô",
+    "Ã£": "ã",
+    "Ãµ": "õ",
+    "Ã§": "ç",
+    "Ã": "Á",
+    "Ã‰": "É",
+    "Ã": "Í",
+    "Ã“": "Ó",
+    "Ãš": "Ú",
+    "Ã‡": "Ç",
+    "Â°": "°",
+}
+
+
+def clean_text(value: str) -> str:
+    clean = str(value or "").strip()
+    for wrong, right in MOJIBAKE_FIXES.items():
+        clean = clean.replace(wrong, right)
+    return clean
+
+
+def text_key(value: str) -> str:
+    normalized = unicodedata.normalize("NFD", clean_text(value))
+    without_accents = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+    return re.sub(r"\s+", " ", without_accents).strip().lower()
+
+
+def parse_int_text(value: str) -> int:
+    digits = re.sub(r"\D", "", str(value or ""))
+    return int(digits or 0)
+
+
+def parse_decimal_text(value: str) -> float:
+    clean = clean_text(value).replace(".", "").replace(",", ".")
+    try:
+        return float(clean)
+    except ValueError:
+        return 0.0
+
+
+def status_metrics(status: str) -> tuple[int, int, int, float, str]:
+    status = normalize_status(status)
+    active = 0 if status == STATUS_DEMOBILIZED else 1
+    available = 1 if status in {STATUS_AVAILABLE, STATUS_STOPPED} and active else 0
+    unavailable = 1 if status not in {STATUS_AVAILABLE, STATUS_STOPPED, STATUS_DEMOBILIZED} and active else 0
+    hours = 24.0 if unavailable else 0.0
+    reason = STATUS_MAINTENANCE_REASON if status == STATUS_MAINTENANCE else status
+    return active, available, unavailable, hours, reason
+
+
+def profile_lookup(payload: dict) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for row in payload.get("base", []) + payload.get("current", []):
+        placa = clean_text(row.get("placa", "")).upper()
+        perfil = clean_text(row.get("perfil", ""))
+        if placa and perfil and placa not in lookup:
+            lookup[placa] = perfil
+    return lookup
+
+
+def infer_profile(placa: str, frota: str, capacity_boxes: int, lookup: dict[str, str]) -> str:
+    if placa in lookup:
+        return lookup[placa]
+    if capacity_boxes <= 100:
+        return "VUC"
+    if capacity_boxes <= 260:
+        return "VUC-TRUCK"
+    if capacity_boxes <= 340:
+        return "TOCO"
+    if capacity_boxes <= 504:
+        return "TRUCK"
+    if capacity_boxes <= 650:
+        return "BITRUCK"
+    if capacity_boxes:
+        return "CARRETA"
+    return clean_text(frota) or "Frota"
+
+
+def imported_status(status_raw: str, reason_raw: str) -> tuple[str | None, str | None]:
+    status = text_key(status_raw)
+    reason = text_key(reason_raw)
+    if status == "disponivel":
+        return STATUS_AVAILABLE, None
+    if status == "parado":
+        return STATUS_STOPPED, None
+    if status == "indisponivel":
+        if "manutencao" in reason:
+            return STATUS_MAINTENANCE, None
+        return STATUS_UNAVAILABLE, None
+    if status == "nao contratada":
+        return None, "Status Nao Contratada ignorado"
+    return None, f"Status nao reconhecido: {clean_text(status_raw) or 'vazio'}"
+
+
+def parse_fleet_csv(content: str, filename: str, base_payload: dict) -> dict:
+    if not content.strip():
+        raise ValueError("arquivo vazio")
+
+    rows = list(csv.reader(io.StringIO(content.replace("\ufeff", "")), delimiter=";"))
+    data_iso = ""
+    data_label = ""
+    header_index = -1
+
+    for index, row in enumerate(rows):
+        cells = [clean_text(cell) for cell in row]
+        if cells and text_key(cells[0]) == "data" and len(cells) > 1:
+            data_iso = parse_date_br(cells[1])
+            data_label = date_label(data_iso)
+        if len(cells) > 1 and text_key(cells[0]) == "frota" and text_key(cells[1]) == "placa":
+            header_index = index
+            break
+
+    if header_index < 0:
+        raise ValueError("cabecalho da tabela de frota nao encontrado")
+    if not data_iso:
+        raise ValueError("data do arquivo nao encontrada")
+
+    headers = [clean_text(cell) for cell in rows[header_index]]
+    header_map = {text_key(name): idx for idx, name in enumerate(headers) if clean_text(name)}
+
+    def cell(row: list[str], name: str) -> str:
+        idx = header_map.get(text_key(name))
+        if idx is None or idx >= len(row):
+            return ""
+        return clean_text(row[idx])
+
+    lookup = profile_lookup(base_payload)
+    imported_rows: list[dict] = []
+    ignored: list[dict] = []
+
+    for line_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
+        placa = cell(row, "Placa").upper()
+        if not placa:
+            continue
+
+        status, ignore_reason = imported_status(cell(row, "Status"), cell(row, "Justificativa"))
+        if not status:
+            ignored.append(
+                {
+                    "line": line_number,
+                    "placa": placa,
+                    "status": cell(row, "Status"),
+                    "reason": ignore_reason,
+                }
+            )
+            continue
+
+        frota = cell(row, "Frota")
+        capacity_boxes = parse_int_text(cell(row, "Capacidade Caixas"))
+        reason = cell(row, "Justificativa")
+        observation = cell(row, "Observação")
+        region = cell(row, "Região")
+        notes = [part for part in [region, reason, observation] if part]
+
+        imported_rows.append(
+            {
+                "placa": placa,
+                "perfil": infer_profile(placa, frota, capacity_boxes, lookup),
+                "status": status,
+                "motorista": "",
+                "observacao": " | ".join(notes),
+                "osNumber": "",
+                "statusObservation": reason,
+                "notices": [],
+                "source": "Importado CSV",
+                "frota": clean_text(frota),
+                "segmento": cell(row, "Segmento"),
+                "capacityBoxes": capacity_boxes,
+                "capacityWeight": parse_decimal_text(cell(row, "Capacidade Peso")),
+            }
+        )
+
+    if not imported_rows:
+        raise ValueError("nenhum veiculo valido para importar")
+
+    counts: dict[str, int] = {}
+    for item in imported_rows:
+        counts[item["status"]] = counts.get(item["status"], 0) + 1
+
+    return {
+        "filename": filename,
+        "date": data_iso,
+        "dateLabel": data_label,
+        "rows": imported_rows,
+        "summary": {
+            "imported": len(imported_rows),
+            "ignored": len(ignored),
+            "counts": counts,
+            "ignoredRows": ignored[:30],
+        },
+    }
+
+
+def snapshot_current_rows(date: str, rows: list[dict]) -> list[dict]:
+    return [
+        {
+            "data": date,
+            "dataLabel": date_label(date),
+            "perfil": item.get("perfil", ""),
+            "placa": clean_text(item.get("placa", "")).upper(),
+            "status": normalize_status(item.get("status", "")),
+            "motorista": item.get("motorista", ""),
+            "observacao": item.get("observacao", ""),
+            "source": item.get("source", "Painel"),
+            "osNumber": item.get("osNumber", ""),
+            "statusObservation": item.get("statusObservation", ""),
+        }
+        for item in rows
+    ]
+
+
+def snapshot_base_rows(date: str, rows: list[dict]) -> list[dict]:
+    mes, mes_label, week, week_label = month_info(date)
+    base_rows = []
+    for item in rows:
+        status = normalize_status(item.get("status", ""))
+        active, available, unavailable, hours, reason = status_metrics(status)
+        base_rows.append(
+            {
+                "data": date,
+                "dataLabel": date_label(date),
+                "mes": mes,
+                "mesLabel": mes_label,
+                "semanaMes": week,
+                "semanaLabel": week_label,
+                "perfil": item.get("perfil", ""),
+                "placa": clean_text(item.get("placa", "")).upper(),
+                "status": status,
+                "motorista": item.get("motorista", ""),
+                "observacao": item.get("observacao", ""),
+                "motivo": reason,
+                "ativo": active,
+                "disponivel": available,
+                "indisponivel": unavailable,
+                "horasIndisp": hours,
+            }
+        )
+    return base_rows
+
+
+def latest_daily_snapshot() -> tuple[str, dict] | None:
+    store = get_daily_history_store()
+    valid = [(date, payload) for date, payload in store.items() if payload.get("rows")]
+    if not valid:
+        return None
+    return max(valid, key=lambda item: item[0])
+
+
+def read_effective_data_payload() -> dict:
+    payload = read_data_payload()
+    latest = latest_daily_snapshot()
+    if not payload or not latest:
+        return payload
+
+    date, snapshot = latest
+    rows = snapshot.get("rows", [])
+    payload = json.loads(json.dumps(payload, ensure_ascii=False))
+    payload.setdefault("meta", {})
+    payload["meta"]["ultimaDataBaseIso"] = date
+    payload["meta"]["ultimaDataBase"] = date_label(date)
+    payload["meta"]["periodoFim"] = date_label(date)
+    payload["meta"]["geradoEm"] = snapshot.get("updatedAt") or payload["meta"].get("geradoEm", "")
+    payload["current"] = snapshot_current_rows(date, rows)
+    payload["base"] = [row for row in payload.get("base", []) if row.get("data") != date]
+    payload["base"].extend(snapshot_base_rows(date, rows))
+    return payload
 
 
 def supabase_request(
@@ -278,6 +556,21 @@ def set_override(
     store.setdefault(date, {})[placa] = item
     save_json(LOCAL_OVERRIDES, store)
     return store.get(date, {})
+
+
+def clear_overrides(date: str) -> None:
+    if USE_SUPABASE:
+        supabase_request(
+            "DELETE",
+            "fleet_status_overrides",
+            query={"base_date": f"eq.{date}"},
+            prefer="return=minimal",
+        )
+        return
+
+    store = load_json(LOCAL_OVERRIDES, {})
+    store.pop(date, None)
+    save_json(LOCAL_OVERRIDES, store)
 
 
 def get_notices(date: str) -> list[dict]:
@@ -647,7 +940,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return
 
             if parsed.path == "/api/data":
-                self.send_json({"data": read_data_payload()})
+                self.send_json({"data": read_effective_data_payload()})
                 return
 
             if parsed.path == "/api/history":
@@ -766,6 +1059,26 @@ class Handler(SimpleHTTPRequestHandler):
                     return
                 self.send_json(
                     {"date": date, "notices": add_notice(date, placa, text, user["username"])}
+                )
+                return
+
+            if parsed.path == "/api/import-csv":
+                user = self.require_editor()
+                if not user:
+                    return
+                payload = read_request_json(self)
+                content = str(payload.get("content", ""))
+                filename = str(payload.get("filename", "import.csv"))
+                parsed_import = parse_fleet_csv(content, filename, read_data_payload())
+                clear_overrides(parsed_import["date"])
+                save_daily_snapshot(parsed_import["date"], parsed_import["rows"], user["username"])
+                self.send_json(
+                    {
+                        "ok": True,
+                        "date": parsed_import["date"],
+                        "dateLabel": parsed_import["dateLabel"],
+                        "summary": parsed_import["summary"],
+                    }
                 )
                 return
 
